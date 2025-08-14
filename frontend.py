@@ -4,6 +4,7 @@ import mimetypes
 import time
 from io import BytesIO, StringIO
 from typing import Any, Dict, List, Optional, Tuple
+import uuid
 
 import pandas as pd
 import requests
@@ -578,36 +579,36 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.markdown('<div class="section-header">Sample Questions</div>',
-                unsafe_allow_html=True)
+    st.title("Set API Key in Backend")  # App title
 
-    sample_categories = {
-        "Sales Analysis": [
-            "What is the total sales across all regions?",
-            "Which region has the highest sales?",
-            "Create a sales trend chart by month",
-            "Show sales distribution by product category"
-        ],
-        "Network Analysis": [
-            "How many nodes and edges are in the network?",
-            "Which node has the highest centrality?",
-            "Visualize the network graph",
-            "Find communities in the network"
-        ],
-        "Time Series": [
-            "Plot the time series data",
-            "Identify seasonal patterns",
-            "Forecast next 12 months",
-            "Detect anomalies in the data"
-        ]
-    }
+    # Generate a session ID once per user session
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
 
-    selected_category = st.selectbox(
-        "Choose Category", list(sample_categories.keys()))
+    # Input API key from user
+    api_key = st.text_input("Enter your Google API Key", type="password")
 
-    for question in sample_categories[selected_category]:
-        if st.button(question, key=f"sample_{question}"):
-            st.session_state.sample_question = question
+    # Button to send key to backend
+    if st.button("Activate API Key"):
+        if api_key:
+            try:
+                # Send both API key and session ID to backend
+                response = requests.post(
+                    "http://https://bharath4444-grasper-ai.hf.space/set_api_key/",
+                    json={
+                        "session_id": st.session_state.session_id,
+                        "api_key": api_key
+                    }
+                )
+                if response.status_code == 200:
+                    st.success("✅ API key set for your session!")
+                else:
+                    st.error(f"Backend error: {response.text}")
+            except Exception as e:
+                st.error(f"Error connecting to backend: {e}")
+        else:
+            st.warning("Please enter a key.")
+
 
 # Main Content Area
 col1, col2 = st.columns([1, 1], gap="large")
