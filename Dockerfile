@@ -34,5 +34,5 @@ RUN uv sync --no-cache-dir
 
 # Expose application ports
 EXPOSE 8501
-# uv run streamlit run frontend.py --server.headless true --server.port 8501 
-CMD["uv", "run", "streamlit", "run", "frontend.py", "--server.headless", "true", "--server.port", "8501"]
+
+CMD ["uv", "run", "streamlit", "run", "frontend.py", "--server.headless", "true", "--server.port", "8501"]
