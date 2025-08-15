@@ -11,10 +11,13 @@ import pandas as pd
 import requests
 import streamlit as st
 from PIL import Image
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
-
+API_BASE_URL = "https://bharath4444-grasper-ai.hf.space/"
+# API_BASE_URL = os.getenv("API_ROOT", "http://localhost:8000")
 # Configure page
 st.set_page_config(
     page_title="Grasper - Advanced Data Analytics",
@@ -75,11 +78,6 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-
-# API Configuration
-# Change this to your FastAPI server URL
-API_BASE_URL = "https://bharath4444-grasper-ai.hf.space/analyze_data"
-# API_BASE_URL = "https://bharath4444-grasper-ai.hf.space"  # Uncomment for production
 
 # ========== Helper Functions ==========
 
@@ -561,13 +559,63 @@ with col1:
     elif questions_file_found:
         default_question = questions_from_file
 
-    questions = st.text_area(
-        "Analysis Questions",
-        value=default_question,
-        height=200,
-        placeholder="Enter your analysis questions here...\n\nExample:\n- What are the key insights from this data?\n- Create visualizations for the main trends\n- Provide summary statistics",
-        help="Describe what you want to analyze or discover from your data",
-    )
+    auto_save = st.checkbox(
+        "Auto-save edits to local questions.txt", value=False)
+
+    # Live-edit support for a local questions.txt (project root)
+    local_questions_path = os.path.join(os.getcwd(), "questions.txt")
+    local_exists = os.path.exists(local_questions_path)
+
+    # Define a callback for autosave
+    def _autosave_questions():
+        txt = st.session_state.get("questions_area", "")
+        try:
+            with open(local_questions_path, "w", encoding="utf-8") as qf:
+                qf.write(txt)
+            st.session_state._last_save = time.time()
+        except Exception:
+            st.warning("Auto-save failed")
+
+    textarea_args = {
+        "value": default_question,
+        "height": 200,
+        "placeholder": "Enter your analysis questions here...\n\nExample:\n- What are the key insights from this data?\n- Create visualizations for the main trends\n- Provide summary statistics",
+        "help": "Describe what you want to analyze or discover from your data",
+        "key": "questions_area",
+    }
+
+    if auto_save and local_exists:
+        textarea_args["on_change"] = _autosave_questions
+
+    questions = st.text_area("Analysis Questions", **textarea_args)
+
+    if local_exists and not questions_file_found:
+        # If there's a local file and user didn't upload one, load it by default
+        try:
+            with open(local_questions_path, "r", encoding="utf-8") as qf:
+                local_text = qf.read()
+                if not questions.strip():
+                    # populate the text area with local file content
+                    questions = local_text
+        except Exception:
+            st.warning("Could not read local questions.txt")
+
+    # Save edits back to local questions.txt
+    col_save, col_sample = st.columns([1, 1])
+    with col_save:
+        if st.button("Save to questions.txt"):
+            try:
+                with open(local_questions_path, "w", encoding="utf-8") as qf:
+                    qf.write(questions)
+                st.success(f"Saved questions to {local_questions_path}")
+            except Exception as e:
+                st.error(f"Failed to save questions.txt: {e}")
+
+    with col_sample:
+        if st.button("Load example questions"):
+            example_text = "- What are the key insights from this data?\n- Show top 10 contributors by value\n- Plot trends over time"
+            questions = example_text
+            st.experimental_rerun()
 
     # File Preview
     if uploaded_files:
@@ -632,7 +680,7 @@ with col2:
                 progress_bar.progress(20)
 
                 response = requests.post(
-                    f"{API_BASE_URL}/analyze_data", files=files, timeout=timeout)
+                    f"{API_BASE_URL}/api/analyze_data", files=files, timeout=timeout)
                 progress_bar.progress(60)
 
                 if response.status_code != 200:
@@ -796,3 +844,27 @@ with col2:
         st.markdown(
             '<div class="section-header">Recent Analyses</div>', unsafe_allow_html=True
         )
+
+        for entry in st.session_state.analysis_history:
+            timestamp = entry["timestamp"]
+            questions = entry["questions"]
+            result = entry["result"]
+
+            with st.expander(
+                f"Analysis on {time.ctime(timestamp)}", expanded=False
+            ):
+                st.markdown("### Questions")
+                st.write(questions)
+
+                st.markdown("### Result")
+                if isinstance(result, dict) and "answer" in result:
+                    answer = result["answer"]
+
+                    # Try to display as JSON
+                    try:
+                        parsed_answer = json.loads(answer)
+                        st.json(parsed_answer, expanded=False)
+                    except json.JSONDecodeError:
+                        st.write(answer)
+                else:
+                    st.json(result, expanded=False)

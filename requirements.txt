@@ -1,3 +1,4 @@
 # This file is required for Vercel to detect Python dependencies.
 # Add your dependencies here, e.g. Flask, FastAPI, etc.
 streamlit
+dotenv
