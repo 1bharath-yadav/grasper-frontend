@@ -2,6 +2,7 @@ import base64
 import json
 import mimetypes
 import time
+import uuid
 from io import BytesIO, StringIO
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -252,7 +253,8 @@ def get_mime_type(data_uri: str) -> str:
 def render_media_content(name: str, data: str) -> None:
     """Render different types of media content."""
     try:
-        mime_type = get_mime_type(data) if data.startswith("data:") else "image/png"
+        mime_type = get_mime_type(data) if data.startswith(
+            "data:") else "image/png"
 
         # Clean data for processing
         if data.startswith("data:"):
@@ -351,7 +353,8 @@ def preview_file(uploaded_file) -> None:
         elif name.endswith(".txt"):
             uploaded_file.seek(0)
             txt = uploaded_file.read().decode("utf-8", errors="ignore")
-            st.text_area("Preview", value=txt[:2000], height=200, disabled=True)
+            st.text_area(
+                "Preview", value=txt[:2000], height=200, disabled=True)
 
         elif name.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp")):
             uploaded_file.seek(0)
@@ -375,7 +378,8 @@ def make_multipart_files(uploaded_files, questions_text: str, use_questions_file
         for f in uploaded_files:
             if f.name.lower() == "questions.txt":
                 f.seek(0)
-                files["questions.txt"] = ("questions.txt", f.read(), "text/plain")
+                files["questions.txt"] = (
+                    "questions.txt", f.read(), "text/plain")
                 break
     else:
         files["questions.txt"] = (
@@ -465,7 +469,7 @@ def display_results_dashboard(parsed: Dict[str, Any]):
         for i in range(0, len(metric_items), cols_per_row):
             cols = st.columns(cols_per_row)
 
-            for j, (key, value) in enumerate(metric_items[i : i + cols_per_row]):
+            for j, (key, value) in enumerate(metric_items[i: i + cols_per_row]):
                 with cols[j]:
                     st.markdown(
                         f"""
@@ -512,7 +516,8 @@ def display_results_dashboard(parsed: Dict[str, Any]):
                     )
 
                 with col3:
-                    json_data = df.to_json(orient="records", indent=2).encode("utf-8")
+                    json_data = df.to_json(
+                        orient="records", indent=2).encode("utf-8")
                     st.download_button(
                         "Download JSON",
                         data=json_data,
@@ -529,13 +534,15 @@ def display_results_dashboard(parsed: Dict[str, Any]):
 
         # Display media files (audio, video, images with data URIs)
         for name, data in media_files:
-            st.markdown('<div class="media-container">', unsafe_allow_html=True)
+            st.markdown('<div class="media-container">',
+                        unsafe_allow_html=True)
             render_media_content(name, data)
             st.markdown("</div>", unsafe_allow_html=True)
 
         # Display base64 images
         for name, data in images:
-            st.markdown('<div class="media-container">', unsafe_allow_html=True)
+            st.markdown('<div class="media-container">',
+                        unsafe_allow_html=True)
             render_media_content(name, data)
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -589,35 +596,80 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.title("Set API Key in Backend")  # App title
+    # API Key Configuration Section
+    st.markdown(
+        '<div class="section-header">🔑 API Key Setup</div>', unsafe_allow_html=True
+    )
 
-    # Generate a session ID once per user session
+    # Initialize session state for session ID if not exists
     if "session_id" not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())
+        try:
+            st.session_state.session_id = str(uuid.uuid4())
+        except Exception as e:
+            st.error(f"Error initializing session: {e}")
+            st.session_state.session_id = f"session_{int(time.time())}"
+
+    # Initialize API key status in session state
+    if "api_key_status" not in st.session_state:
+        st.session_state.api_key_status = "Not Set"
+
+    if "api_key_value" not in st.session_state:
+        st.session_state.api_key_value = ""
+
+    # Display current API key status
+    status_color = "🔴" if st.session_state.api_key_status == "Not Set" else "🟢"
+    st.markdown(
+        f"**Status:** {status_color} {st.session_state.api_key_status}")
 
     # Input API key from user
-    api_key = st.text_input("Enter your Google API Key", type="password")
+    api_key = st.text_input(
+        "Enter your Google API Key",
+        type="password",
+        value=st.session_state.api_key_value,
+        help="Your API key will be securely stored for this session only"
+    )
 
     # Button to send key to backend
-    if st.button("Activate API Key"):
-        if api_key:
-            try:
-                # Send both API key and session ID to backend
-                response = requests.post(
-                    "http://https://bharath4444-grasper-ai.hf.space/set_api_key/",
-                    json={
-                        "session_id": st.session_state.session_id,
-                        "api_key": api_key,
-                    },
-                )
-                if response.status_code == 200:
-                    st.success("✅ API key set for your session!")
-                else:
-                    st.error(f"Backend error: {response.text}")
-            except Exception as e:
-                st.error(f"Error connecting to backend: {e}")
-        else:
-            st.warning("Please enter a key.")
+    col_activate, col_clear = st.columns(2)
+
+    with col_activate:
+        if st.button("🔑 Activate API Key", use_container_width=True):
+            if api_key:
+                try:
+                    # Send both API key and session ID to backend
+                    response = requests.post(
+                        "https://bharath4444-grasper-ai.hf.space/set_api_key/",
+                        json={
+                            "session_id": st.session_state.session_id,
+                            "api_key": api_key,
+                        },
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        st.session_state.api_key_status = "Active"
+                        st.session_state.api_key_value = api_key
+                        st.success("✅ API key activated successfully!")
+                        st.rerun()
+                    else:
+                        st.session_state.api_key_status = "Error"
+                        st.error(f"❌ Backend error: {response.text}")
+                except requests.exceptions.Timeout:
+                    st.error("⏱️ Request timed out. Please try again.")
+                except requests.exceptions.ConnectionError:
+                    st.error(
+                        "🌐 Connection error. Check your internet connection.")
+                except Exception as e:
+                    st.session_state.api_key_status = "Error"
+                    st.error(f"❌ Error connecting to backend: {e}")
+            else:
+                st.warning("⚠️ Please enter an API key.")
+
+    with col_clear:
+        if st.button("🗑️ Clear Key", use_container_width=True):
+            st.session_state.api_key_status = "Not Set"
+            st.session_state.api_key_value = ""
+            st.success("🗑️ API key cleared from session.")
+            st.rerun()
 
 
 # Main Content Area
@@ -730,7 +782,8 @@ with col2:
                 )
                 progress_bar.progress(20)
 
-                response = requests.post(api_endpoint, files=files, timeout=timeout)
+                response = requests.post(
+                    api_endpoint, files=files, timeout=timeout)
                 progress_bar.progress(60)
 
                 if response.status_code != 200:
@@ -824,7 +877,8 @@ with col2:
                                     try:
                                         if answer_content.strip().startswith("{"):
                                             parsed_data = eval(
-                                                answer_content, {"__builtins__": {}}
+                                                answer_content, {
+                                                    "__builtins__": {}}
                                             )
                                     except:
                                         pass
@@ -835,9 +889,11 @@ with col2:
                                 if isinstance(parsed_data, list):
                                     try:
                                         df = pd.DataFrame(parsed_data)
-                                        st.dataframe(df, use_container_width=True)
+                                        st.dataframe(
+                                            df, use_container_width=True)
 
-                                        csv = df.to_csv(index=False).encode("utf-8")
+                                        csv = df.to_csv(
+                                            index=False).encode("utf-8")
                                         st.download_button(
                                             "Download Results as CSV",
                                             data=csv,
