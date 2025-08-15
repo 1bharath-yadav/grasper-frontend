@@ -4,7 +4,6 @@ import mimetypes
 import time
 from io import BytesIO, StringIO
 from typing import Any, Dict, List, Optional, Tuple
-import uuid
 
 import pandas as pd
 import requests
@@ -20,7 +19,8 @@ st.set_page_config(
 )
 
 # Custom CSS for modern styling
-st.markdown("""
+st.markdown(
+    """
 <style>
     .main > div {
         padding-top: 2rem;
@@ -211,7 +211,9 @@ st.markdown("""
         color: rgba(255, 255, 255, 0.7);
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ========== Helper Functions ==========
 
@@ -250,8 +252,7 @@ def get_mime_type(data_uri: str) -> str:
 def render_media_content(name: str, data: str) -> None:
     """Render different types of media content."""
     try:
-        mime_type = get_mime_type(data) if data.startswith(
-            "data:") else "image/png"
+        mime_type = get_mime_type(data) if data.startswith("data:") else "image/png"
 
         # Clean data for processing
         if data.startswith("data:"):
@@ -265,8 +266,10 @@ def render_media_content(name: str, data: str) -> None:
 
         decoded_data = base64.b64decode(clean_data)
 
-        st.markdown(f'<div class="section-header">{name.replace("_", " ").title()}</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="section-header">{name.replace("_", " ").title()}</div>',
+            unsafe_allow_html=True,
+        )
 
         # Handle different media types
         if mime_type.startswith("image/"):
@@ -280,7 +283,7 @@ def render_media_content(name: str, data: str) -> None:
                     data=decoded_data,
                     file_name=f"{name}.{mime_type.split('/')[-1]}",
                     mime=mime_type,
-                    key=f"download_{name}_img"
+                    key=f"download_{name}_img",
                 )
             except Exception as e:
                 st.error(f"Could not display image: {e}")
@@ -292,7 +295,7 @@ def render_media_content(name: str, data: str) -> None:
                 data=decoded_data,
                 file_name=f"{name}.{mime_type.split('/')[-1]}",
                 mime=mime_type,
-                key=f"download_{name}_audio"
+                key=f"download_{name}_audio",
             )
 
         elif mime_type.startswith("video/"):
@@ -302,7 +305,7 @@ def render_media_content(name: str, data: str) -> None:
                 data=decoded_data,
                 file_name=f"{name}.{mime_type.split('/')[-1]}",
                 mime=mime_type,
-                key=f"download_{name}_video"
+                key=f"download_{name}_video",
             )
 
         else:
@@ -315,7 +318,7 @@ def render_media_content(name: str, data: str) -> None:
                     data=decoded_data,
                     file_name=f"{name}.png",
                     mime="image/png",
-                    key=f"download_{name}_file"
+                    key=f"download_{name}_file",
                 )
             except Exception:
                 st.error(f"Unsupported media type: {mime_type}")
@@ -348,8 +351,7 @@ def preview_file(uploaded_file) -> None:
         elif name.endswith(".txt"):
             uploaded_file.seek(0)
             txt = uploaded_file.read().decode("utf-8", errors="ignore")
-            st.text_area(
-                "Preview", value=txt[:2000], height=200, disabled=True)
+            st.text_area("Preview", value=txt[:2000], height=200, disabled=True)
 
         elif name.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp")):
             uploaded_file.seek(0)
@@ -362,7 +364,7 @@ def preview_file(uploaded_file) -> None:
     except Exception as e:
         st.error(f"Preview failed: {e}")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def make_multipart_files(uploaded_files, questions_text: str, use_questions_file: bool):
@@ -373,8 +375,7 @@ def make_multipart_files(uploaded_files, questions_text: str, use_questions_file
         for f in uploaded_files:
             if f.name.lower() == "questions.txt":
                 f.seek(0)
-                files["questions.txt"] = (
-                    "questions.txt", f.read(), "text/plain")
+                files["questions.txt"] = ("questions.txt", f.read(), "text/plain")
                 break
     else:
         files["questions.txt"] = (
@@ -418,7 +419,10 @@ def display_results_dashboard(parsed: Dict[str, Any]):
                 continue
 
         # Check for chart/graph keywords
-        if any(keyword in lname for keyword in ["_chart", "_graph", "_plot", "_image", "_visualization"]):
+        if any(
+            keyword in lname
+            for keyword in ["_chart", "_graph", "_plot", "_image", "_visualization"]
+        ):
             if isinstance(v, str):
                 images.append((k, v))
                 continue
@@ -449,8 +453,9 @@ def display_results_dashboard(parsed: Dict[str, Any]):
 
     # Display metrics in cards
     if metrics:
-        st.markdown('<div class="section-header">Key Metrics</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-header">Key Metrics</div>', unsafe_allow_html=True
+        )
 
         # Create responsive columns
         num_metrics = len(metrics)
@@ -460,19 +465,23 @@ def display_results_dashboard(parsed: Dict[str, Any]):
         for i in range(0, len(metric_items), cols_per_row):
             cols = st.columns(cols_per_row)
 
-            for j, (key, value) in enumerate(metric_items[i:i+cols_per_row]):
+            for j, (key, value) in enumerate(metric_items[i : i + cols_per_row]):
                 with cols[j]:
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                     <div class="metric-card">
                         <div class="metric-value">{value}</div>
                         <div class="metric-label">{key.replace('_', ' ').title()}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """,
+                        unsafe_allow_html=True,
+                    )
 
     # Display tables
     if tables:
-        st.markdown('<div class="section-header">Data Tables</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-header">Data Tables</div>', unsafe_allow_html=True
+        )
 
         for name, df in tables.items():
             with st.expander(f"{name.replace('_', ' ').title()}", expanded=True):
@@ -488,7 +497,7 @@ def display_results_dashboard(parsed: Dict[str, Any]):
                         data=csv,
                         file_name=f"{name}.csv",
                         mime="text/csv",
-                        key=f"csv_{name}"
+                        key=f"csv_{name}",
                     )
 
                 with col2:
@@ -499,43 +508,43 @@ def display_results_dashboard(parsed: Dict[str, Any]):
                         data=excel_buffer.getvalue(),
                         file_name=f"{name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key=f"excel_{name}"
+                        key=f"excel_{name}",
                     )
 
                 with col3:
-                    json_data = df.to_json(
-                        orient="records", indent=2).encode("utf-8")
+                    json_data = df.to_json(orient="records", indent=2).encode("utf-8")
                     st.download_button(
                         "Download JSON",
                         data=json_data,
                         file_name=f"{name}.json",
                         mime="application/json",
-                        key=f"json_{name}"
+                        key=f"json_{name}",
                     )
 
     # Display media content
     if media_files or images:
-        st.markdown('<div class="section-header">Visual Content</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-header">Visual Content</div>', unsafe_allow_html=True
+        )
 
         # Display media files (audio, video, images with data URIs)
         for name, data in media_files:
-            st.markdown('<div class="media-container">',
-                        unsafe_allow_html=True)
+            st.markdown('<div class="media-container">', unsafe_allow_html=True)
             render_media_content(name, data)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
         # Display base64 images
         for name, data in images:
-            st.markdown('<div class="media-container">',
-                        unsafe_allow_html=True)
+            st.markdown('<div class="media-container">', unsafe_allow_html=True)
             render_media_content(name, data)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # Display text content
     if text_content:
         st.markdown(
-            '<div class="section-header">Additional Content</div>', unsafe_allow_html=True)
+            '<div class="section-header">Additional Content</div>',
+            unsafe_allow_html=True,
+        )
 
         for name, content in text_content.items():
             with st.expander(f"{name.replace('_', ' ').title()}", expanded=False):
@@ -544,34 +553,35 @@ def display_results_dashboard(parsed: Dict[str, Any]):
                 else:
                     st.text(str(content))
 
+
 # ========== Main UI ==========
 
 
 # Header
-st.markdown("""
+st.markdown(
+    """
 <div class="main-header">
     <h1 class="main-title">Grasper Analytics</h1>
     <p class="subtitle">Advanced Data Analysis & Visualization Platform</p>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # Sidebar Configuration
 with st.sidebar:
-    st.markdown('<div class="section-header">Configuration</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-header">Configuration</div>', unsafe_allow_html=True
+    )
 
     api_endpoint = st.text_input(
         "API Endpoint",
-        value="https://bharath4444-grasper-ai.hf.space/api/",
-        help="URL of the Grasper API endpoint"
+        value="https://bharath4444-grasper-ai.hf.space/api/hero_anand_sir",
+        help="URL of the Grasper API endpoint",
     )
 
     timeout = st.slider(
-        "Request Timeout (seconds)",
-        min_value=30,
-        max_value=300,
-        value=120,
-        step=10
+        "Request Timeout (seconds)", min_value=30, max_value=300, value=120, step=10
     )
 
     show_raw_response = st.checkbox("Show raw API response", value=False)
@@ -597,8 +607,8 @@ with st.sidebar:
                     "http://https://bharath4444-grasper-ai.hf.space/set_api_key/",
                     json={
                         "session_id": st.session_state.session_id,
-                        "api_key": api_key
-                    }
+                        "api_key": api_key,
+                    },
                 )
                 if response.status_code == 200:
                     st.success("✅ API key set for your session!")
@@ -614,8 +624,9 @@ with st.sidebar:
 col1, col2 = st.columns([1, 1], gap="large")
 
 with col1:
-    st.markdown('<div class="section-header">Analysis Setup</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-header">Analysis Setup</div>', unsafe_allow_html=True
+    )
 
     # File Upload Section
 
@@ -623,7 +634,7 @@ with col1:
         "Upload any file type",
         type=None,
         accept_multiple_files=True,
-        help="You can upload any file type."
+        help="You can upload any file type.",
     )
 
     # Check for questions.txt
@@ -654,23 +665,26 @@ with col1:
         value=default_question,
         height=200,
         placeholder="Enter your analysis questions here...\n\nExample:\n- What are the key insights from this data?\n- Create visualizations for the main trends\n- Provide summary statistics",
-        help="Describe what you want to analyze or discover from your data"
+        help="Describe what you want to analyze or discover from your data",
     )
 
     # File Preview
     if uploaded_files:
-        st.markdown('<div class="section-header">File Preview</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-header">File Preview</div>', unsafe_allow_html=True
+        )
 
         for uploaded_file in uploaded_files:
-            with st.expander(f"{uploaded_file.name} ({uploaded_file.size:,} bytes)", expanded=False):
+            with st.expander(
+                f"{uploaded_file.name} ({uploaded_file.size:,} bytes)", expanded=False
+            ):
                 preview_file(uploaded_file)
 
     # Analysis Options
     use_questions_file = st.checkbox(
         "Use uploaded questions.txt file",
         value=questions_file_found,
-        disabled=not questions_file_found
+        disabled=not questions_file_found,
     )
 
     # Analysis Button
@@ -679,12 +693,13 @@ with col1:
         "Start Analysis",
         type="primary",
         use_container_width=True,
-        disabled=not questions.strip()
+        disabled=not questions.strip(),
     )
 
 with col2:
-    st.markdown('<div class="section-header">Results & Insights</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-header">Results & Insights</div>', unsafe_allow_html=True
+    )
 
     # Initialize session state
     if "analysis_history" not in st.session_state:
@@ -709,41 +724,55 @@ with col2:
 
             try:
                 # Send request
-                status_text.markdown('<div class="status-info">Sending request to API...</div>',
-                                     unsafe_allow_html=True)
+                status_text.markdown(
+                    '<div class="status-info">Sending request to API...</div>',
+                    unsafe_allow_html=True,
+                )
                 progress_bar.progress(20)
 
-                response = requests.post(
-                    api_endpoint, files=files, timeout=timeout)
+                response = requests.post(api_endpoint, files=files, timeout=timeout)
                 progress_bar.progress(60)
 
                 if response.status_code != 200:
                     status_text.markdown(
                         f'<div class="status-error">API Error {response.status_code}: {response.text}</div>',
-                        unsafe_allow_html=True
+                        unsafe_allow_html=True,
                     )
                 else:
-                    status_text.markdown('<div class="status-success">Processing response...</div>',
-                                         unsafe_allow_html=True)
+                    status_text.markdown(
+                        '<div class="status-success">Processing response...</div>',
+                        unsafe_allow_html=True,
+                    )
                     progress_bar.progress(80)
 
                     try:
                         result = response.json()
 
                         # Store in history
-                        st.session_state.analysis_history.insert(0, {
-                            "timestamp": time.time(),
-                            "questions": questions,
-                            "result": result,
-                            "files": [f.name for f in uploaded_files] if uploaded_files else []
-                        })
+                        st.session_state.analysis_history.insert(
+                            0,
+                            {
+                                "timestamp": time.time(),
+                                "questions": questions,
+                                "result": result,
+                                "files": (
+                                    [f.name for f in uploaded_files]
+                                    if uploaded_files
+                                    else []
+                                ),
+                            },
+                        )
 
                         # Keep only last 10 results
-                        st.session_state.analysis_history = st.session_state.analysis_history[:10]
+                        st.session_state.analysis_history = (
+                            st.session_state.analysis_history[:10]
+                        )
 
                         progress_bar.progress(100)
-                        status_text.markdown('<div class="status-success">Analysis completed successfully!</div>',
-                                             unsafe_allow_html=True)
+                        status_text.markdown(
+                            '<div class="status-success">Analysis completed successfully!</div>',
+                            unsafe_allow_html=True,
+                        )
 
                         # Display results
                         if show_raw_response:
@@ -762,10 +791,15 @@ with col2:
 
                         if answers:
                             # Show generated code if available
-                            if isinstance(answers, dict) and "generated_code" in answers:
+                            if (
+                                isinstance(answers, dict)
+                                and "generated_code" in answers
+                            ):
                                 code = answers["generated_code"]
                                 if code:
-                                    with st.expander("Generated Python Code", expanded=False):
+                                    with st.expander(
+                                        "Generated Python Code", expanded=False
+                                    ):
                                         st.code(code, language="python")
                                         st.download_button(
                                             "Download Code",
@@ -775,8 +809,11 @@ with col2:
                                         )
 
                             # Display main results
-                            answer_content = answers.get("answer") if isinstance(
-                                answers, dict) else answers
+                            answer_content = (
+                                answers.get("answer")
+                                if isinstance(answers, dict)
+                                else answers
+                            )
 
                             # Try to parse structured data
                             parsed_data = None
@@ -787,7 +824,8 @@ with col2:
                                     try:
                                         if answer_content.strip().startswith("{"):
                                             parsed_data = eval(
-                                                answer_content, {"__builtins__": {}})
+                                                answer_content, {"__builtins__": {}}
+                                            )
                                     except:
                                         pass
                             elif isinstance(answer_content, (dict, list)):
@@ -797,11 +835,9 @@ with col2:
                                 if isinstance(parsed_data, list):
                                     try:
                                         df = pd.DataFrame(parsed_data)
-                                        st.dataframe(
-                                            df, use_container_width=True)
+                                        st.dataframe(df, use_container_width=True)
 
-                                        csv = df.to_csv(
-                                            index=False).encode("utf-8")
+                                        csv = df.to_csv(index=False).encode("utf-8")
                                         st.download_button(
                                             "Download Results as CSV",
                                             data=csv,
@@ -822,19 +858,27 @@ with col2:
                         status_container.empty()
 
                     except json.JSONDecodeError:
-                        status_text.markdown('<div class="status-error">Invalid JSON response from API</div>',
-                                             unsafe_allow_html=True)
+                        status_text.markdown(
+                            '<div class="status-error">Invalid JSON response from API</div>',
+                            unsafe_allow_html=True,
+                        )
                         st.text(response.text)
 
             except requests.exceptions.Timeout:
-                status_text.markdown('<div class="status-error">Request timeout. Try increasing timeout in settings.</div>',
-                                     unsafe_allow_html=True)
+                status_text.markdown(
+                    '<div class="status-error">Request timeout. Try increasing timeout in settings.</div>',
+                    unsafe_allow_html=True,
+                )
             except requests.exceptions.ConnectionError:
-                status_text.markdown('<div class="status-error">Connection failed. Check if API server is running.</div>',
-                                     unsafe_allow_html=True)
+                status_text.markdown(
+                    '<div class="status-error">Connection failed. Check if API server is running.</div>',
+                    unsafe_allow_html=True,
+                )
             except Exception as e:
-                status_text.markdown(f'<div class="status-error">Unexpected error: {str(e)}</div>',
-                                     unsafe_allow_html=True)
+                status_text.markdown(
+                    f'<div class="status-error">Unexpected error: {str(e)}</div>',
+                    unsafe_allow_html=True,
+                )
                 if enable_debug:
                     st.exception(e)
 
@@ -842,4 +886,5 @@ with col2:
     if st.session_state.analysis_history:
         st.markdown("---")
         st.markdown(
-            '<div class="section-header">Recent Analyses</div>', unsafe_allow_html=True)
+            '<div class="section-header">Recent Analyses</div>', unsafe_allow_html=True
+        )
