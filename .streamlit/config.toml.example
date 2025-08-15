@@ -1,0 +1,11 @@
+# Example Streamlit theme config
+[theme]
+# base can be "dark" or "light"
+base = "dark"
+
+# Optional: adjust fonts/colors per Streamlit docs
+# primaryColor = "#4CAF50"
+# backgroundColor = "#0E1117"
+# secondaryBackgroundColor = "#111417"
+# textColor = "#FAFAFA"
+# font = "sans serif"

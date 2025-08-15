@@ -5,11 +5,15 @@ import time
 import uuid
 from io import BytesIO, StringIO
 from typing import Any, Dict, List, Optional, Tuple
+import os
 
 import pandas as pd
 import requests
 import streamlit as st
 from PIL import Image
+
+# API Configuration
+API_BASE_URL = "http://localhost:8000"
 
 # Configure page
 st.set_page_config(
@@ -19,202 +23,63 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for modern styling
+# Streamlit config helpers (use .streamlit/config.toml per Streamlit docs)
+CONFIG_DIR = os.path.join(os.getcwd(), ".streamlit")
+CONFIG_FILE = os.path.join(CONFIG_DIR, "config.toml")
+
+
+def read_streamlit_base_theme() -> Optional[str]:
+    """Return 'dark' or 'light' if found in .streamlit/config.toml, else None."""
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    # Expect lines like: base = "dark"
+                    if line.startswith("base") and "=" in line:
+                        val = line.split("=", 1)[1].strip().strip(
+                            '"').strip("'")
+                        return val.lower()
+    except Exception:
+        return None
+    return None
+
+
+def write_streamlit_base_theme(base: str) -> None:
+    """Write a minimal Streamlit config with the chosen base theme.
+
+    This follows Streamlit's recommended config file approach and keeps things
+    simple so the app owner can restart the app to apply the theme globally.
+    """
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    content = f"[theme]\nbase = \"{base}\"\n"
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+# Theming is handled via Streamlit's config file (.streamlit/config.toml).
+# Keep only minimal, theme-independent CSS here. Use `.streamlit/config.toml`
+# to set `theme.base = "dark"` or `"light"` per Streamlit docs.
+
+# Common CSS styles (theme-independent)
 st.markdown(
     """
 <style>
-    .main > div {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-    
-    .stApp > header {
-        background-color: transparent;
-    }
-    
-    .stApp {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    .main-header {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        text-align: center;
-    }
-    
-    .main-title {
-        font-size: 3rem;
-        font-weight: 700;
-        background: linear-gradient(45deg, #fff, #e0e6ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-    }
-    
-    .subtitle {
-        font-size: 1.2rem;
-        opacity: 0.9;
-        margin-bottom: 0;
-    }
-    
-    .card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        margin-bottom: 1rem;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-    }
-    
-    .metric-card {
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(10px);
-        border-radius: 10px;
-        padding: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        text-align: center;
-        transition: transform 0.3s ease;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #fff;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        opacity: 0.8;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .section-header {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin: 1.5rem 0 1rem 0;
-        color: white;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-        padding-bottom: 0.5rem;
-    }
-    
-    .upload-area {
-        border: 2px dashed rgba(255, 255, 255, 0.3);
-        border-radius: 10px;
-        padding: 2rem;
-        text-align: center;
-        background: rgba(255, 255, 255, 0.05);
-        margin: 1rem 0;
-    }
-    
-    .status-success {
-        background: rgba(46, 213, 115, 0.2);
-        color: #2ed573;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #2ed573;
-        margin: 1rem 0;
-    }
-    
-    .status-error {
-        background: rgba(255, 107, 107, 0.2);
-        color: #ff6b6b;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #ff6b6b;
-        margin: 1rem 0;
-    }
-    
-    .status-info {
-        background: rgba(116, 185, 255, 0.2);
-        color: #74b9ff;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #74b9ff;
-        margin: 1rem 0;
-    }
-    
-    .quick-start {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 2rem;
-        margin-top: 2rem;
-    }
-    
-    .step-card {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .media-container {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 1rem;
-        margin: 1rem 0;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .file-preview {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .stButton > button {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        color: white;
-        border-radius: 25px;
-        border: none;
-        padding: 0.5rem 2rem;
-        font-weight: 600;
-        box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.4);
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px 0 rgba(102, 126, 234, 0.6);
-    }
-    
-    .sidebar .stSelectbox > div > div > select {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .sidebar .stTextInput > div > div > input {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .footer {
-        text-align: center;
-        padding: 2rem;
-        margin-top: 3rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.7);
-    }
+    /* Minimal, theme-neutral styles. Colors are controlled by Streamlit theme. */
+    .main-title { font-size: 2.4rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .section-header { font-size: 1.25rem; font-weight: 600; margin: 1rem 0 0.5rem 0; }
+    .card { border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+    .file-preview { border-radius: 8px; padding: 0.75rem; margin: 0.5rem 0; }
+    .stButton > button { border-radius: 8px; padding: 0.5rem 1rem; }
 </style>
 """,
     unsafe_allow_html=True,
 )
+
+# API Configuration
+# Change this to your FastAPI server URL
+API_BASE_URL = "https://bharath4444-grasper-ai.hf.space/analyze_data"
+# API_BASE_URL = "https://bharath4444-grasper-ai.hf.space"  # Uncomment for production
 
 # ========== Helper Functions ==========
 
@@ -563,29 +428,13 @@ def display_results_dashboard(parsed: Dict[str, Any]):
 
 # ========== Main UI ==========
 
-
-# Header
-st.markdown(
-    """
-<div class="main-header">
-    <h1 class="main-title">Grasper Analytics</h1>
-    <p class="subtitle">Advanced Data Analysis & Visualization Platform</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-
 # Sidebar Configuration
 with st.sidebar:
     st.markdown(
-        '<div class="section-header">Configuration</div>', unsafe_allow_html=True
+        '<div class="section-header">Grasper Analytics</div>', unsafe_allow_html=True
     )
 
-    api_endpoint = st.text_input(
-        "API Endpoint",
-        value="https://bharath4444-grasper-ai.hf.space/api/hero_anand_sir",
-        help="URL of the Grasper API endpoint",
-    )
+    st.markdown("---")
 
     timeout = st.slider(
         "Request Timeout (seconds)", min_value=30, max_value=300, value=120, step=10
@@ -598,7 +447,7 @@ with st.sidebar:
 
     # API Key Configuration Section
     st.markdown(
-        '<div class="section-header">🔑 API Key Setup</div>', unsafe_allow_html=True
+        '<div class="section-header">API Key Setup</div>', unsafe_allow_html=True
     )
 
     # Initialize session state for session ID if not exists
@@ -623,10 +472,10 @@ with st.sidebar:
 
     # Input API key from user
     api_key = st.text_input(
-        "Enter your Google API Key",
+        "Enter your Gemini API Key",
         type="password",
         value=st.session_state.api_key_value,
-        help="Your API key will be securely stored for this session only"
+        help="Your Gemini API key will be securely stored for this session only"
     )
 
     # Button to send key to backend
@@ -638,7 +487,7 @@ with st.sidebar:
                 try:
                     # Send both API key and session ID to backend
                     response = requests.post(
-                        "https://bharath4444-grasper-ai.hf.space/set_api_key/",
+                        f"{API_BASE_URL}/set_api_key/",
                         json={
                             "session_id": st.session_state.session_id,
                             "api_key": api_key,
@@ -783,7 +632,7 @@ with col2:
                 progress_bar.progress(20)
 
                 response = requests.post(
-                    api_endpoint, files=files, timeout=timeout)
+                    f"{API_BASE_URL}/analyze_data", files=files, timeout=timeout)
                 progress_bar.progress(60)
 
                 if response.status_code != 200:
@@ -853,10 +702,13 @@ with col2:
                                     with st.expander(
                                         "Generated Python Code", expanded=False
                                     ):
-                                        st.code(code, language="python")
+                                        # Ensure code is a string before displaying/downloading
+                                        code_str = code if isinstance(
+                                            code, str) else json.dumps(code, indent=2)
+                                        st.code(code_str, language="python")
                                         st.download_button(
                                             "Download Code",
-                                            data=code.encode("utf-8"),
+                                            data=code_str.encode("utf-8"),
                                             file_name="analysis_code.py",
                                             mime="text/x-python",
                                         )
